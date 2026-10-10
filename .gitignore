@@ -1,0 +1,11 @@
+*.bak*
+*.log
+*.swp
+*~
+.env
+.env.*
+*history*
+*.sqlite*
+*.db
+.DS_Store
+__pycache__/

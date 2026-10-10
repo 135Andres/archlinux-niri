@@ -1,0 +1,13 @@
+[Unit]
+Description=Fondo estable para Niri con soporte de rotación
+After=niri.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/home/lav/.local/bin/swaybg-wallpaper
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,30 @@
+# ~/.config/swaylock/config
+image=/etc/xdg/quickshell/caelestia/assets/wallpaper.webp
+scaling=fill
+indicator
+indicator-radius=100
+indicator-thickness=8
+
+# Colores Tokyo Night
+inside-color=1a1b26cc
+inside-clear-color=1a1b26cc
+inside-ver-color=7aa2f7cc
+inside-wrong-color=f7768ecc
+
+ring-color=7aa2f7
+ring-clear-color=e0af68
+ring-ver-color=7aa2f7
+ring-wrong-color=f7768e
+
+key-hl-color=bb9af7
+bs-hl-color=f7768e
+
+line-color=00000000
+line-clear-color=00000000
+line-ver-color=00000000
+line-wrong-color=00000000
+
+text-color=c0caf5
+text-clear-color=c0caf5
+text-ver-color=1a1b26
+text-wrong-color=1a1b26

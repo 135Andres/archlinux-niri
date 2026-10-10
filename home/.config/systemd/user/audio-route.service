@@ -1,0 +1,12 @@
+[Unit]
+Description=Enrutado automatico de audio (DAC > Bluetooth > altavoces)
+After=pipewire.service pipewire-pulse.service wireplumber.service
+
+[Service]
+Type=simple
+ExecStart=/home/lav/.local/bin/audio-route
+Restart=on-failure
+RestartSec=2s
+
+[Install]
+WantedBy=default.target

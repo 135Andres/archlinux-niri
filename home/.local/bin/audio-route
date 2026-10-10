@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# Enrutado automatico de la salida de audio.
+#
+# Prioridad: DAC UGREEN CM720 > Sony WH-1000XM4 (Bluetooth) > altavoces.
+#
+# Reacciona a eventos reales de PipeWire (conectar/desconectar, cambio de
+# perfil del XM4, llegada del DAC). Durante 10 s tras un evento se impone la
+# prioridad; despues solo se corrige si el dispositivo por defecto ha
+# desaparecido, de modo que una eleccion manual del usuario se respeta.
+set -u
+
+DAC_SINK="alsa_output.usb-Realtek_UGREEN_CM720_USB_Audio_202312130006-00.analog-stereo"
+SPEAKERS="alsa_output.pci-0000_00_1f.3.analog-stereo"
+BT_PREFIX="bluez_output."
+ENFORCE_WINDOW=10
+EVENT_FLAG="/run/user/$(id -u)/audio-route.event"
+
+log() { printf 'audio-route: %s\n' "$*" >&2; }
+
+sinks() { pactl list short sinks 2>/dev/null | awk '{ print $2 }'; }
+
+sink_exists() {
+  sinks | awk -v n="$1" '$0 == n { found = 1 } END { exit !found }'
+}
+
+bt_sink() { sinks | awk -v p="$BT_PREFIX" 'index($0, p) == 1 { print; exit }'; }
+
+best_sink() {
+  local bt
+  if sink_exists "$DAC_SINK"; then
+    printf '%s\n' "$DAC_SINK"
+    return 0
+  fi
+  bt="$(bt_sink)"
+  if [ -n "$bt" ]; then
+    printf '%s\n' "$bt"
+    return 0
+  fi
+  if sink_exists "$SPEAKERS"; then
+    printf '%s\n' "$SPEAKERS"
+    return 0
+  fi
+  return 1
+}
+
+move_streams() {
+  local dest="$1" index
+  pactl list short sink-inputs 2>/dev/null | awk '{ print $1 }' | while read -r index; do
+    [ -n "$index" ] && pactl move-sink-input-by-index "$index" "$dest" 2>/dev/null
+  done
+  return 0
+}
+
+apply() {
+  local want="$1"
+  pactl set-default-sink "$want" 2>/dev/null || return 0
+  move_streams "$want"
+  log "salida predeterminada: $want"
+}
+
+# Escucha eventos de alta/baja de sinks y de cambios de perfil de tarjeta.
+# Se ignoran 'change' en sink (volumen) y 'change' en server (eleccion manual
+# del usuario) para no sobrescribir la eleccion manual.
+(
+  while :; do
+    pactl subscribe 2>/dev/null | while IFS= read -r line; do
+      case "$line" in
+        Event\ \'new\'\ on\ sink* | Event\ \'remove\'\ on\ sink* | \
+        Event\ \'new\'\ on\ card* | Event\ \'remove\'\ on\ card* | \
+        Event\ \'change\'\ on\ card*)
+          : >"$EVENT_FLAG" 2>/dev/null || true
+          ;;
+      esac
+    done
+    sleep 2
+  done
+) &
+
+enforce_until=0
+tick=0
+while :; do
+  now="$(date +%s)"
+  had_event=0
+  if [ -e "$EVENT_FLAG" ]; then
+    rm -f "$EVENT_FLAG" 2>/dev/null || true
+    enforce_until=$((now + ENFORCE_WINDOW))
+    had_event=1
+  fi
+
+  current="$(pactl get-default-sink 2>/dev/null)"
+  best="$(best_sink)" || { sleep 1; continue; }
+
+  if [ -z "$current" ] || ! sink_exists "$current"; then
+    # El dispositivo por defecto desaparecio (p.ej. al reencender el XM4).
+    apply "$best"
+  elif [ "$now" -lt "$enforce_until" ] && [ "$current" != "$best" ]; then
+    # Ventana posterior a un evento: recupera la prioridad correcta.
+    apply "$best"
+  fi
+
+  # El EQ del XM4 solo debe existir cuando el XM4 es la salida.
+  tick=$((tick + 1))
+  if [ "$had_event" -eq 1 ] || [ $((tick % 10)) -eq 0 ]; then
+    /home/lav/.local/bin/xm4-eq &
+  fi
+
+  sleep 1
+done

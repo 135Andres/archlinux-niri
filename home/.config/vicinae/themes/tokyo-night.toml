@@ -1,0 +1,74 @@
+# Tokyo Night (Night) para Vicinae — paleta del setup
+# Fondo #1a1b26, texto #c0caf5
+
+[meta]
+name = "Tokyo Night"
+description = "Tokyo Night Night palette"
+variant = "dark"
+inherits = "vicinae-dark"
+
+[colors.core]
+accent = "#7aa2f7"
+accent_foreground = "#1a1b26"
+background = "#1a1b26"
+foreground = "#c0caf5"
+secondary_background = "#24283b"
+border = "#414868"
+
+[colors.main_window]
+border = "#414868"
+footer = { background = "colors.core.secondary_background" }
+
+[colors.settings_window]
+border = "#414868"
+
+[colors.accents]
+blue = "#7aa2f7"
+green = "#9ece6a"
+magenta = "#bb9af7"
+orange = "#e0af68"
+red = "#f7768e"
+yellow = "#e0af68"
+cyan = "#7dcfff"
+purple = "#bb9af7"
+
+[colors.shortcut]
+border = "colors.core.border"
+
+[colors.text]
+default = "colors.core.foreground"
+muted = "#a9b1d6"
+danger = "#f7768e"
+success = "#9ece6a"
+placeholder = "#414868"
+selection = { background = "#7aa2f7", foreground = "#1a1b26" }
+
+[colors.text.links]
+default = "#7aa2f7"
+visited = "#bb9af7"
+
+[colors.input]
+border = "#414868"
+border_focus = "#7aa2f7"
+border_error = "#f7768e"
+
+[colors.button.primary]
+background = "#24283b"
+foreground = "#c0caf5"
+hover = { background = "#414868" }
+focus = { outline = "colors.core.accent" }
+
+[colors.list.item.hover]
+foreground = "#c0caf5"
+secondary_foreground = "#a9b1d6"
+
+[colors.list.item.selection]
+background = "#24283b"
+foreground = "#c0caf5"
+secondary_background = "#24283b"
+secondary_foreground = "#a9b1d6"
+
+[colors.grid.item]
+background = "#24283b"
+hover = { outline = "#7aa2f7" }
+selection = { outline = "#7aa2f7" }

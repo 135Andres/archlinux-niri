@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -u
+
+wallpaper="${WALLPAPER_PATH:-$(cat /home/lav/.local/state/caelestia/wallpaper/path.txt 2>/dev/null || true)}"
+name="${wallpaper##*/}"
+last_good_file="/home/lav/.local/state/caelestia/user-wallpaper.path"
+
+# Remember only real user-selected wallpapers; never save Caelestia's fallback.
+if [[ -f "$wallpaper" && "$wallpaper" != */assets/wallpaper.webp ]]; then
+  printf '%s\n' "$wallpaper" > "$last_good_file"
+fi
+
+case "$name" in
+  Vincent_van_Gogh*|vincent*|*van*gogh*)
+    theme="van-gogh"
+    ;;
+  *)
+    theme="impressionist"
+    ;;
+esac
+
+# swaybg is the stable wallpaper layer on Niri. Restart it when the
+# wallpaper changes; the systemd wrapper will immediately load the new path.
+pkill -x swaybg >/dev/null 2>&1 || true
+
+# Keep Kitty synchronized with the selected wallpaper palette.
+kitty_theme="/home/lav/.config/kitty/themes/${theme}.conf"
+kitty_active="/home/lav/.config/kitty/wallpaper-theme.conf"
+cp "$kitty_theme" "$kitty_active"
+kitty @ load-config >/dev/null 2>&1 || true
+
+# Keep the bottom dock synchronized too.
+ironbar_theme="/home/lav/.config/ironbar/themes/${theme}.css"
+ironbar_active="/home/lav/.config/ironbar/style.css"
+if ! cmp -s "$ironbar_theme" "$ironbar_active"; then
+  cp "$ironbar_theme" "$ironbar_active"
+  pkill -x ironbar >/dev/null 2>&1 || true
+  sleep 0.3
+  export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}"
+  export DISPLAY="${DISPLAY:-:0}"
+  export XDG_CURRENT_DESKTOP="${XDG_CURRENT_DESKTOP:-niri}"
+  nohup ironbar >/tmp/opencode/ironbar-theme.log 2>&1 &
+  disown || true
+fi
+
+# Keep the launcher palette synchronized when Vicinae is available.
+vicinae theme set "$theme" >/dev/null 2>&1 || true
+
+# Chromium/Brave follows the freedesktop portal and the GTK theme.
+# Derive the browser mode from the wallpaper itself, independently of
+# Caelestia's forced dark shell mode.
+smart_json="$(caelestia wallpaper -p "$wallpaper" 2>/dev/null || true)"
+browser_mode="$(printf '%s' "$smart_json" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("mode", "dark"))' 2>/dev/null || printf '%s' "${SCHEME_MODE:-dark}")"
+
+if [ "$browser_mode" = "light" ]; then
+  gsettings set org.gnome.desktop.interface color-scheme 'prefer-light' 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita' 2>/dev/null || true
+  gtk_theme='Adwaita'
+  gtk_dark='0'
+  brave_flags='# Light wallpaper: Brave follows prefer-light.'
+else
+  gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+  gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark' 2>/dev/null || true
+  gtk_theme='Adwaita-dark'
+  gtk_dark='1'
+  brave_flags='--force-dark-mode\n--enable-features=WebUIDarkMode'
+fi
+
+# Brave's system wrapper reads one flag per line from this file.
+printf '%b\n' "$brave_flags" > /home/lav/.config/brave-origin-flags.conf
+
+for gtk_version in 3.0 4.0; do
+  mkdir -p "/home/lav/.config/gtk-${gtk_version}"
+  cat > "/home/lav/.config/gtk-${gtk_version}/settings.ini" <<EOF
+[Settings]
+gtk-icon-theme-name=Papirus-Dark
+gtk-theme-name=${gtk_theme}
+gtk-application-prefer-dark-theme=${gtk_dark}
+EOF
+done
+
+printf 'wallpaper-theme: %s (%s), Brave: %s\n' "$theme" "$name" "$browser_mode"

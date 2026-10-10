@@ -1,0 +1,113 @@
+#!/usr/bin/env bash
+set -u
+
+REAL_CAELESTIA=/usr/bin/caelestia
+NIRI_MSG=/home/lav/.local/bin/niri-msg.sh
+RECORDER=gpu-screen-recorder
+RECORD_TMP=/home/lav/.local/state/caelestia/record/recording.mp4
+RECORDINGS_DIR=/home/lav/Videos/Recordings
+
+if [[ "${1-}" != record ]]; then
+  exec "$REAL_CAELESTIA" "$@"
+fi
+shift
+
+region=false
+region_value=""
+sound=false
+clipboard=false
+pause=false
+
+while (($#)); do
+  case "$1" in
+    -r|--region)
+      region=true
+      if (($# > 1)) && [[ "${2-}" != -* ]]; then
+        region_value="$2"
+        shift
+      fi
+      ;;
+    -s|--sound) sound=true ;;
+    -c|--clipboard) clipboard=true ;;
+    -p|--pause) pause=true ;;
+    -h|--help)
+      exec "$REAL_CAELESTIA" record --help
+      ;;
+    *)
+      printf 'caelestia-wrapper: unknown record option: %s\n' "$1" >&2
+      exit 2
+      ;;
+  esac
+  shift
+done
+
+running() {
+  pidof "$RECORDER" >/dev/null 2>&1
+}
+
+recorder_pids() {
+  pidof "$RECORDER" 2>/dev/null || true
+}
+
+if $pause; then
+  if running; then
+    for pid in $(recorder_pids); do kill -USR2 "$pid" 2>/dev/null || true; done
+  fi
+  exit 0
+fi
+
+if running; then
+  for pid in $(recorder_pids); do kill -TERM "$pid" 2>/dev/null || true; done
+  for _ in {1..50}; do
+    running || break
+    sleep 0.1
+  done
+  if running; then
+    for pid in $(recorder_pids); do kill -KILL "$pid" 2>/dev/null || true; done
+  fi
+
+  if [[ ! -s "$RECORD_TMP" ]]; then
+    notify-send "Recording failed" "The recorder did not produce a video file." || true
+    exit 1
+  fi
+
+  mkdir -p "$RECORDINGS_DIR"
+  new_path="$RECORDINGS_DIR/recording_$(date +%Y%m%d_%H-%M-%S).mp4"
+  mv "$RECORD_TMP" "$new_path"
+  notify-send "Recording stopped" "Saved in $new_path" || true
+  if $clipboard; then
+    printf 'file://%s\n' "$new_path" | wl-copy --type text/uri-list || true
+  fi
+  exit 0
+fi
+
+mkdir -p "$(dirname "$RECORD_TMP")"
+rm -f "$RECORD_TMP"
+
+monitor_name="$($NIRI_MSG -j outputs 2>/dev/null | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(iter(d)))' 2>/dev/null || true)"
+[[ -n "$monitor_name" ]] || monitor_name="monitor"
+
+args=(-w "$monitor_name" -f 60)
+
+if $region; then
+  if [[ -z "$region_value" ]]; then
+    region_value="$(slurp -f '%wx%h+%x+%y')"
+  fi
+  args=(-w region -region "$region_value" -f 60)
+fi
+
+if $sound; then
+  args+=(-a default_output)
+fi
+
+"$RECORDER" "${args[@]}" -o "$RECORD_TMP" >/tmp/opencode/gpu-screen-recorder.log 2>&1 &
+recorder_pid=$!
+sleep 1
+if ! kill -0 "$recorder_pid" 2>/dev/null; then
+  notify-send "Recording failed" "gpu-screen-recorder could not start." || true
+  cat /tmp/opencode/gpu-screen-recorder.log >&2 || true
+  exit 1
+fi
+
+notify-send "Recording started" "Recording ${monitor_name}..." || true
+exit 0

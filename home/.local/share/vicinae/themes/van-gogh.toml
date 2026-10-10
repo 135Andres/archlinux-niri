@@ -1,0 +1,69 @@
+[meta]
+version = 1
+name = "Van Gogh"
+description = "Dark botanical palette derived from Patch of Grass"
+variant = "dark"
+inherits = "vicinae-dark"
+
+[colors.core]
+background = "#0E0F09"
+foreground = "#E6E7D5"
+secondary_background = "#191A12"
+border = "#757768"
+accent = "#C0CC95"
+accent_foreground = "#0E0F09"
+
+[colors.main_window]
+border = "#757768"
+footer = { background = "colors.core.secondary_background" }
+
+[colors.settings_window]
+border = "#757768"
+
+[colors.accents]
+blue = "#94B480"
+green = "#C1D660"
+magenta = "#FFEFCE"
+orange = "#C6A844"
+red = "#A19200"
+yellow = "#E7ED70"
+cyan = "#B8D387"
+purple = "#C6A844"
+
+[colors.text]
+default = "colors.core.foreground"
+muted = "#ABAC9C"
+danger = "#F97758"
+success = "#C1D660"
+placeholder = "#757768"
+selection = { background = "#C0CC95", foreground = "#0E0F09" }
+
+[colors.text.links]
+default = "#CAE58E"
+visited = "#FFEFCE"
+
+[colors.input]
+border = "#757768"
+border_focus = "#C0CC95"
+border_error = "#F97758"
+
+[colors.button.primary]
+background = "#191A12"
+foreground = "#E6E7D5"
+hover = { background = "#2B2D22" }
+focus = { outline = "colors.core.accent" }
+
+[colors.list.item.hover]
+foreground = "#E6E7D5"
+secondary_foreground = "#ABAC9C"
+
+[colors.list.item.selection]
+background = "#1F2117"
+foreground = "#E6E7D5"
+secondary_background = "#1F2117"
+secondary_foreground = "#ABAC9C"
+
+[colors.grid.item]
+background = "#191A12"
+hover = { outline = "#C0CC95" }
+selection = { outline = "#C0CC95" }

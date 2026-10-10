@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+# Modo de audio del Sony WH-1000XM4 (Bluetooth).
+#
+#   audio-mode music   -> A2DP con LDAC 990 kbps + microfono del portatil
+#                         (calidad maxima, el XM4 nunca se degrada)
+#   audio-mode video   -> A2DP con AAC (otro codec, por si en un video notas
+#                         laudio desfasado con LDAC) + micro del portatil
+#   audio-mode calls   -> HSP/HFP con mSBC (voz de banda ancha) y microfono
+#                         del XM4 (necesario para llamadas)
+#   audio-mode status  -> muestra el estado actual
+#
+# Atajos: Mod+Alt+M (music), Mod+Alt+L (calls).
+set -u
+
+BT_CARD="bluez_card.80_99_E7_AD_CB_98"
+BT_SINK_PREFIX="bluez_output.80_99_E7_AD_CB_98"
+BUILTIN_MIC="alsa_input.pci-0000_00_1f.3.analog-stereo"
+PROFILE_MUSIC="a2dp-sink"
+PROFILE_VIDEO="a2dp-sink-aac"
+PROFILE_CALLS="headset-head-unit"
+
+log() { printf 'audio-mode: %s\n' "$*" >&2; }
+
+bt_connected() {
+  pactl list short cards 2>/dev/null | awk -v c="$BT_CARD" '$2 == c { found = 1 } END { exit !found }'
+}
+
+bt_sink() {
+  pactl list short sinks 2>/dev/null | awk -v p="$BT_SINK_PREFIX" 'index($2, p) == 1 { print $2; exit }'
+}
+
+bt_source() {
+  pactl list short sources 2>/dev/null | awk '/bluez_input\./ { print $2; exit }'
+}
+
+current_profile() {
+  pactl list cards 2>/dev/null | awk -v c="$BT_CARD" '
+    $0 ~ "Name: " c { inside = 1 }
+    inside && /Active Profile:/ { print $3; exit }'
+}
+
+set_profile() {
+  local want="$1" current
+  current="$(current_profile)"
+  if [ "$current" = "$want" ]; then
+    return 0
+  fi
+  if pactl set-card-profile "$BT_CARD" "$want" 2>/dev/null; then
+    log "perfil Bluetooth: $want"
+  else
+    log "no se pudo cambiar al perfil $want"
+    return 1
+  fi
+}
+
+# Al cambiar de perfil el sink BT se recrea: hay que esperar a que exista.
+wait_for_bt_sink() {
+  local i
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    [ -n "$(bt_sink)" ] && return 0
+    sleep 0.4
+  done
+  return 1
+}
+
+move_streams() {
+  local dest="$1" index
+  pactl list short sink-inputs 2>/dev/null | awk '{ print $1 }' | while read -r index; do
+    [ -n "$index" ] && pactl move-sink-input-by-index "$index" "$dest" 2>/dev/null
+  done
+  return 0
+}
+
+mode_a2dp() {
+  local profile="$1" label="$2" sink
+  bt_connected || { log "el XM4 no esta conectado"; return 1; }
+  set_profile "$profile" || return 1
+  wait_for_bt_sink || { log "el sink Bluetooth no volvio"; return 1; }
+  sink="$(bt_sink)"
+  if [ -n "$sink" ] && [ "$(pactl get-default-sink 2>/dev/null)" != "$sink" ]; then
+    pactl set-default-sink "$sink" 2>/dev/null && move_streams "$sink"
+  fi
+  if pactl list short sources 2>/dev/null | awk -v m="$BUILTIN_MIC" '$2 == m { f = 1 } END { exit !f }'; then
+    pactl set-default-source "$BUILTIN_MIC" 2>/dev/null || true
+  fi
+  log "modo $label, microfono del portatil"
+  /home/lav/.local/bin/xm4-eq >/dev/null 2>&1 &
+}
+
+mode_music() { mode_a2dp "$PROFILE_MUSIC" "musica: LDAC 990 kbps"; }
+mode_video() { mode_a2dp "$PROFILE_VIDEO" "video: codec AAC"; }
+
+mode_calls() {
+  bt_connected || { log "el XM4 no esta conectado"; return 1; }
+  set_profile "$PROFILE_CALLS" || return 1
+  wait_for_bt_sink || { log "el sink Bluetooth no volvio"; return 1; }
+  local sink source
+  sink="$(bt_sink)"
+  source="$(bt_source)"
+  [ -n "$sink" ] && pactl set-default-sink "$sink" 2>/dev/null && move_streams "$sink"
+  [ -n "$source" ] && pactl set-default-source "$source" 2>/dev/null
+  log "modo llamadas: HSP/HFP mSBC, microfono del XM4"
+}
+
+mode_status() {
+  local codec
+  codec="$(pactl list sinks 2>/dev/null | awk '/api.bluez5.codec/ { gsub(/"/, "", $3); print $3; exit }')"
+  printf 'perfil Bluetooth : %s\n' "$(current_profile)"
+  printf 'codec            : %s\n' "${codec:-desconocido}"
+  printf 'salida actual    : %s\n' "$(pactl get-default-sink 2>/dev/null)"
+  printf 'entrada actual   : %s\n' "$(pactl get-default-source 2>/dev/null)"
+  printf 'volumen salida   : %s\n' "$(pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null)"
+}
+
+case "${1:-status}" in
+  music) mode_music ;;
+  video) mode_video ;;
+  calls) mode_calls ;;
+  status) mode_status ;;
+  *) printf 'uso: audio-mode {music|video|calls|status}\n' >&2; exit 2 ;;
+esac

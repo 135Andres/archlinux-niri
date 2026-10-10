@@ -1,0 +1,15 @@
+[Unit]
+Description=Auto-rotación de pantalla (HP x360) para Niri
+Documentation=https://niri-wm.github.io/niri/Configuration:-Gestures
+After=niri.service
+PartOf=graphical-session.target
+
+[Service]
+Environment=XDG_RUNTIME_DIR=%t
+Type=simple
+ExecStart=/home/lav/.local/bin/niri-autorotate.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

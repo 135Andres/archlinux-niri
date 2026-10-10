@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Mantiene el EQ "Sony XM4" (EasyEffects) solo sobre la salida Bluetooth.
+#
+# EasyEffects reconstruye su cadena cada vez que cambia el sink o el perfil
+# del XM4, y en ese caso pierde los plugins (el ecualizador desaparece).
+# Este script (lanzado por audio-route.service) reconcilia el estado deseado:
+#   - si la salida por defecto NO es el XM4 -> EasyEffects cerrado
+#     (los altavoces y el DAC USB quedan sin DSP, totalmente limpios)
+#   - si la salida por defecto ES el XM4 -> EasyEffects abierto y con el
+#     ecualizador presente en la cadena
+#
+# EasyEffects solo monta el ecualizador mientras suena audio (lo desmonta en
+# reposo por diseño), asi que la comprobacion se hace solo con streams vivos.
+#
+# EasyEffects solo se abre cuando hace falta: no se lanza en el inicio de
+# sesión, lo arranca este script en cuanto el XM4 es la salida.
+set -u
+
+COOLDOWN=12
+BT_PREFIX="bluez_output."
+STAMP="/run/user/$(id -u)/xm4-eq.attempt"
+
+have_eq() { wpctl status 2>/dev/null | grep -q 'ee_soe_equalizer'; }
+running() { pgrep -x easyeffects >/dev/null 2>&1; }
+
+recently_tried() {
+  local now mtime
+  now="$(date +%s)"
+  [ -e "$STAMP" ] || return 1
+  mtime="$(stat -c %Y "$STAMP" 2>/dev/null)" || return 1
+  [ $((now - mtime)) -lt "$COOLDOWN" ]
+}
+
+main() {
+  local default
+  default="$(pactl get-default-sink 2>/dev/null)"
+
+  case "$default" in
+    "$BT_PREFIX"*) ;;
+    *)
+      if running; then
+        easyeffects -q >/dev/null 2>&1
+        printf 'xm4-eq: EasyEffects cerrado (la salida actual no es el XM4)\n' >&2
+      fi
+      return 0
+      ;;
+  esac
+
+  running && have_eq && return 0
+
+  # EasyEffects desmonta los plugins de la cadena cuando el dispositivo queda
+  # inactivo y los vuelve a montar al sonar algo. Solo hay que reparar cuando
+  # hay audio en curso; en reposo el equalizador no esta (es normal).
+  pactl list short sink-inputs 2>/dev/null | grep -q . || return 0
+
+  recently_tried && return 0
+  : >"$STAMP" 2>/dev/null || true
+
+  running && { easyeffects -q >/dev/null 2>&1; sleep 1.5; }
+  setsid easyeffects --hide-window >/dev/null 2>&1 &
+
+  local i
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    have_eq && { printf 'xm4-eq: EQ del XM4 activo\n' >&2; return 0; }
+    running || break
+    sleep 1
+  done
+  printf 'xm4-eq: aviso, el EQ no se pudo activar\n' >&2
+}
+
+main

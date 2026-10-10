@@ -1,0 +1,12 @@
+[Unit]
+Description=Protege el wallpaper elegido de Caelestia
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/home/lav/.local/bin/caelestia-wallpaper-guard
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

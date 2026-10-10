@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Selector de portapapeles con soporte real de imagenes.
+#
+#   clipboard-pick            elegir un item del historial y ponerlo en el portapapeles
+#   clipboard-pick --delete   borrar un item del historial
+#   clipboard-pick --last     poner el item mas reciente (sin preguntar)
+#   clipboard-pick --last-image   poner la imagen mas reciente
+#   clipboard-pick --images  =listar solo imagenes
+#
+# A diferencia de "caelestia clipboard", detecta el tipo MIME con file(1) y
+# usa wl-copy --type, de modo que las imagenes se pegan como imagen/png y no
+# como texto roto.
+set -u
+
+PROMPT='Portapapeles> '
+notify() { command -v notify-send >/dev/null 2>&1 && notify-send -a 'Portapapeles' "$@" >/dev/null 2>&1; }
+
+list_items() {
+  case "${1:-all}" in
+    images)
+      cliphist list 2>/dev/null | grep -a '\[\[ binary data .*png\|\[\[ binary data .*jpe\?g\|\[\[ binary data .*gif\|\[\[ binary data .*webp'
+      ;;
+    *)
+      cliphist list 2>/dev/null
+      ;;
+  esac
+}
+
+# prettify: deja el id intacto y hace legible la entrada
+prettify() {
+  local line id body info
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    id="${line%%$'\t'*}"
+    body="${line#*$'\t'}"
+    if [[ "$body" == '[[ binary data'* ]]; then
+      info="${body#\[\[ binary data }"
+      info="${info% \]\]*}"
+      printf '%s\t[imagen] %s\n' "$id" "$info"
+    else
+      printf '%s\n' "$line"
+    fi
+  done
+}
+
+put_on_clipboard() {
+  local id="$1" tmp mime
+  tmp="$(mktemp -t clipboard-XXXXXX.bin)" || return 1
+  cliphist decode "$id" >"$tmp" 2>/dev/null || { rm -f "$tmp"; return 1; }
+
+  mime="$(file -b --mime-type --mime-encoding "$tmp" 2>/dev/null)"
+  mime="${mime%%;*}"
+
+  case "$mime" in
+    image/*)
+      wl-copy --type "$mime" <"$tmp"
+      notify "Imagen pegada ($mime, $(( $(stat -c %s "$tmp") / 1024 )) KiB)"
+      ;;
+    text/* | application/json | application/xml | application/x-shellscript)
+      wl-copy <"$tmp"
+      notify "Texto copiado"
+      ;;
+    *)
+      # tipo desconocido: si parece texto plano, como texto
+      if LC_ALL=C grep -qI . "$tmp" 2>/dev/null; then
+        wl-copy <"$tmp"
+        notify "Texto copiado"
+      else
+        wl-copy --type application/octet-stream <"$tmp"
+        notify "Copiado ($mime)"
+      fi
+      ;;
+  esac
+  rm -f "$tmp"
+}
+
+latest_id() {
+  local filter="$1"
+  if [ "$filter" = images ]; then
+    list_items images | head -n1 | awk '{print $1}'
+  else
+    list_items all | head -n1 | awk '{print $1}'
+  fi
+}
+
+case "${1:-}" in
+  --delete)
+    chosen="$(list_items all | prettify | fuzzel --dmenu --prompt='Borrar> ' --placeholder='Escribe para buscar')" || exit 0
+    [ -z "$chosen" ] && exit 0
+    printf '%s\n' "$chosen" | cliphist delete
+    notify "Borrado del historial"
+    ;;
+  --last)
+    id="$(latest_id all)"
+    [ -n "$id" ] && put_on_clipboard "$id"
+    ;;
+  --last-image)
+    id="$(latest_id images)"
+    if [ -z "$id" ]; then
+      notify "No hay imagenes en el historial"
+      exit 1
+    fi
+    put_on_clipboard "$id"
+    ;;
+  --images)
+    chosen="$(list_items images | prettify | fuzzel --dmenu --prompt='Imagenes> ' --placeholder='Escribe para buscar')" || exit 0
+    [ -z "$chosen" ] && exit 0
+    put_on_clipboard "${chosen%%$'\t'*}"
+    ;;
+  "" | all)
+    chosen="$(list_items all | prettify | fuzzel --dmenu --prompt="$PROMPT" --placeholder='Escribe para buscar')" || exit 0
+    [ -z "$chosen" ] && exit 0
+    put_on_clipboard "${chosen%%$'\t'*}"
+    ;;
+  *)
+    printf 'uso: clipboard-pick [--delete|--last|--last-image|--images]\n' >&2
+    exit 2
+    ;;
+esac

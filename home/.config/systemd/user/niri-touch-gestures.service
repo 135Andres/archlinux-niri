@@ -1,0 +1,15 @@
+[Unit]
+Description=Gestos multitáctiles del touchscreen para Niri (lisgd)
+Documentation=https://sr.ht/~mil/lisgd/
+After=niri.service
+PartOf=graphical-session.target
+
+[Service]
+Environment=XDG_RUNTIME_DIR=%t
+Type=simple
+ExecStart=/home/lav/.local/bin/niri-touch-gestures.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

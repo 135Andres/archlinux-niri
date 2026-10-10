@@ -1,0 +1,5 @@
+{
+  "wallpaper": {
+    "postHook": "/home/lav/.local/bin/sync-wallpaper-theme"
+  }
+}

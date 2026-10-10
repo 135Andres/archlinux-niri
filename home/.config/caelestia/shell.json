@@ -1,0 +1,86 @@
+{
+    "$schema": "https://github.com/caelestia-dots/shell/blob/main/schemas/shell.json",
+    "appearance": {
+        "transparency": {
+            "base": 0.88,
+            "enabled": true,
+            "layers": 0.46
+        }
+    },
+    "background": {
+        "wallpaperEnabled": true
+    },
+    "bar": {
+        "entries": [
+            {
+                "enabled": true,
+                "id": "logo"
+            },
+            {
+                "enabled": false,
+                "id": "workspaces"
+            },
+            {
+                "enabled": true,
+                "id": "spacer"
+            },
+            {
+                "enabled": true,
+                "id": "tray"
+            },
+            {
+                "enabled": true,
+                "id": "clock"
+            },
+            {
+                "enabled": true,
+                "id": "statusIcons"
+            },
+            {
+                "enabled": true,
+                "id": "power"
+            }
+        ],
+        "persistent": false,
+        "scrollActions": {
+            "brightness": false,
+            "volume": false
+        },
+        "showOnHover": true
+    },
+    "border": {
+        "thickness": 2
+    },
+    "dashboard": {
+        "dragThreshold": 8
+    },
+    "general": {
+        "idle": {
+            "inhibitWhenAudio": false,
+            "inhibitWhenCharging": false,
+            "lockBeforeSleep": false,
+            "timeouts": [
+            ]
+        }
+    },
+    "launcher": {
+        "dragThreshold": 8
+    },
+    "lock": {
+        "enableHowdy": true,
+        "maxHowdyTries": 3,
+        "triggerHowdyOnWake": true
+    },
+    "services": {
+        "smartScheme": false,
+        "weatherUnits": "Celsius"
+    },
+    "session": {
+        "dragThreshold": 8
+    },
+    "sidebar": {
+        "dragThreshold": 8,
+        "enabled": true,
+        "showOnHover": true
+    }
+}

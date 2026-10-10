@@ -1,0 +1,88 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/master/doc/json_schema.json",
+
+  "display": {
+    "separator": "  "
+  },
+
+  "modules": [
+    "title",
+    "separator",
+    {
+      "type": "os",
+      "key": "os",
+      "keyColor": "yellow",
+      "format": "{name}"
+    },
+    {
+      "type": "host",
+      "key": "host",
+      "keyColor": "yellow",
+      "format": "{name}"
+    },
+    {
+      "type": "uptime",
+      "key": "upt",
+      "keyColor": "green"
+    },
+    {
+      "type": "packages",
+      "key": "pkg",
+      "keyColor": "green"
+    },
+    {
+      "type": "shell",
+      "key": "sh",
+      "keyColor": "green"
+    },
+    {
+      "type": "display",
+      "key": "disp",
+      "keyColor": "red",
+      "format": "{width}x{height}{?inch} in {inch}\"{?}, {refresh-rate} Hz"
+    },
+    {
+      "type": "wm",
+      "key": "wm",
+      "keyColor": "red"
+    },
+    {
+      "type": "terminal",
+      "key": "term",
+      "keyColor": "blue"
+    },
+    {
+      "type": "terminalfont",
+      "key": "font",
+      "keyColor": "blue"
+    },
+    {
+      "type": "cpu",
+      "key": "cpu",
+      "keyColor": "red",
+      "format": "{name}"
+    },
+    {
+      "type": "gpu",
+      "key": "gpu",
+      "keyColor": "blue"
+    },
+    {
+      "type": "memory",
+      "key": "ram",
+      "keyColor": "yellow"
+    },
+    {
+      "type": "disk",
+      "key": "disk",
+      "keyColor": "yellow"
+    },
+    {
+      "type": "battery",
+      "key": "bat",
+      "keyColor": "green"
+    },
+    "break",
+    "colors"
+  ]
+}

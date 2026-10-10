@@ -1,0 +1,69 @@
+[meta]
+version = 1
+name = "Impressionist"
+description = "Warm dark palette derived from the landscape wallpaper"
+variant = "dark"
+inherits = "vicinae-dark"
+
+[colors.core]
+background = "#100E08"
+foreground = "#EEE5D1"
+secondary_background = "#1D1910"
+border = "#7C7565"
+accent = "#DAC588"
+accent_foreground = "#100E08"
+
+[colors.main_window]
+border = "#7C7565"
+footer = { background = "colors.core.secondary_background" }
+
+[colors.settings_window]
+border = "#7C7565"
+
+[colors.accents]
+blue = "#AAAF6E"
+green = "#E9CA46"
+magenta = "#FCC491"
+orange = "#DB9F47"
+red = "#BE8700"
+yellow = "#FFE39E"
+cyan = "#D6CB72"
+purple = "#DB9F47"
+
+[colors.text]
+default = "colors.core.foreground"
+muted = "#B2AA98"
+danger = "#F97758"
+success = "#E9CA46"
+placeholder = "#7C7565"
+selection = { background = "#DAC588", foreground = "#100E08" }
+
+[colors.text.links]
+default = "#ECDD78"
+visited = "#FCC491"
+
+[colors.input]
+border = "#7C7565"
+border_focus = "#DAC588"
+border_error = "#F97758"
+
+[colors.button.primary]
+background = "#1D1910"
+foreground = "#EEE5D1"
+hover = { background = "#3E3B31" }
+focus = { outline = "colors.core.accent" }
+
+[colors.list.item.hover]
+foreground = "#EEE5D1"
+secondary_foreground = "#B2AA98"
+
+[colors.list.item.selection]
+background = "#231F15"
+foreground = "#EEE5D1"
+secondary_background = "#231F15"
+secondary_foreground = "#B2AA98"
+
+[colors.grid.item]
+background = "#1D1910"
+hover = { outline = "#DAC588" }
+selection = { outline = "#DAC588" }

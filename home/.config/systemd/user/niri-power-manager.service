@@ -1,0 +1,13 @@
+[Unit]
+Description=Gestor de inactividad/energía para Niri (perfiles AC/batería)
+After=niri.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=/home/lav/.local/bin/niri-power-manager.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

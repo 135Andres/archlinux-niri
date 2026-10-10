@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Organiza exactamente cuatro ventanas tiled del workspace activo en un grid 2x2:
+# dos columnas lado a lado, cada una con dos ventanas apiladas verticalmente.
+set -euo pipefail
+
+NIRI_MSG="$HOME/.local/bin/niri-msg.sh"
+NOTIFY_TIMEOUT=2500
+
+notify() {
+  notify-send --expire-time="$NOTIFY_TIMEOUT" "Niri · Cuadrícula 2×2" "$1" || true
+}
+
+# Obtiene el workspace enfocado y las ventanas tiled, ordenadas de izquierda a
+# derecha según la posición que Niri reporta para cada ventana.
+workspace_id="$($NIRI_MSG -j workspaces | python3 -c '
+import json, sys
+for ws in json.load(sys.stdin):
+    if ws.get("is_focused"):
+        print(ws["id"])
+        break
+')"
+
+[[ -n "$workspace_id" ]] || {
+  notify "No se pudo detectar el workspace enfocado."
+  exit 0
+}
+
+mapfile -t window_ids < <(
+  "$NIRI_MSG" -j windows | python3 -c '
+import json, sys
+wid = int(sys.argv[1])
+rows = [w for w in json.load(sys.stdin)
+        if w.get("workspace_id") == wid and not w.get("is_floating")]
+rows.sort(key=lambda w: tuple(w.get("layout", {}).get("pos_in_scrolling_layout", [999, 999])))
+for w in rows:
+    print(w["id"])
+' "$workspace_id"
+)
+
+count="${#window_ids[@]}"
+if [[ "$count" -ne 4 ]]; then
+  notify "Necesito exactamente 4 ventanas tiled; hay $count en este workspace."
+  exit 0
+fi
+
+# Selecciona la primera columna y consume la siguiente ventana en ella.
+"$NIRI_MSG" action focus-column 1
+sleep 0.15
+"$NIRI_MSG" action consume-window-into-column
+sleep 0.25
+
+# Selecciona la segunda columna remaining y consume la cuarta ventana.
+"$NIRI_MSG" action focus-column 2
+sleep 0.15
+"$NIRI_MSG" action consume-window-into-column
+sleep 0.25
+
+# Dos columnas al 50% para ocupar el ancho completo respetando los gaps.
+"$NIRI_MSG" action focus-column 1
+"$NIRI_MSG" action set-column-width "50%"
+"$NIRI_MSG" action focus-column 2
+"$NIRI_MSG" action set-column-width "50%"
+
+notify "Grid 2×2 aplicado: dos columnas con dos ventanas cada una."

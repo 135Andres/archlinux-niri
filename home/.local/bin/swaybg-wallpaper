@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -u
+
+state_file="/home/lav/.local/state/caelestia/wallpaper/path.txt"
+last_good_file="/home/lav/.local/state/caelestia/user-wallpaper.path"
+fallback="/home/lav/Pictures/Wallpapers/Vincent_van_Gogh_-_Patch_of_grass_-_Google_Art_Project.jpg"
+
+while :; do
+  wallpaper="$(tr -d '\r\n' < "$state_file" 2>/dev/null || true)"
+  last_good="$(tr -d '\r\n' < "$last_good_file" 2>/dev/null || true)"
+  if [[ -z "$wallpaper" || ! -f "$wallpaper" || "$wallpaper" == */assets/wallpaper.webp ]]; then
+    if [[ -n "$last_good" && -f "$last_good" ]]; then
+      wallpaper="$last_good"
+    else
+      wallpaper="$fallback"
+    fi
+  fi
+
+  swaybg -i "$wallpaper" -m fill -o eDP-1
+  sleep 1
+done

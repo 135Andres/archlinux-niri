@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -u
+
+wall_dir="/home/lav/Pictures/Wallpapers"
+fallback_default="$wall_dir/Vincent_van_Gogh_-_Patch_of_grass_-_Google_Art_Project.jpg"
+last_good_file="/home/lav/.local/state/caelestia/user-wallpaper.path"
+default_wallpaper="$(tr -d '\r\n' < "$last_good_file" 2>/dev/null || true)"
+if [[ -z "$default_wallpaper" || ! -f "$default_wallpaper" ]]; then
+  default_wallpaper="$fallback_default"
+fi
+state_file="/home/lav/.local/state/caelestia/wallpaper/path.txt"
+current_link="/home/lav/.local/state/caelestia/wallpaper/current"
+last_attempt=0
+
+is_user_wallpaper() {
+  local path="${1:-}"
+  [[ -n "$path" && -f "$path" && "$path" != */assets/wallpaper.webp ]]
+}
+
+repair() {
+  local reason="$1"
+  local now
+  now="$(date +%s)"
+  (( now - last_attempt < 10 )) && return 0
+  last_attempt="$now"
+
+  if ! is_user_wallpaper "$default_wallpaper"; then
+    printf 'caelestia-wallpaper-guard: default wallpaper missing: %s\n' "$default_wallpaper" >&2
+    return 1
+  fi
+
+  printf 'caelestia-wallpaper-guard: repairing (%s), restoring %s\n' "$reason" "$default_wallpaper" >&2
+  caelestia wallpaper -f "$default_wallpaper" --no-smart >/dev/null 2>&1 || true
+}
+
+while :; do
+  current="$(tr -d '\r\n' < "$state_file" 2>/dev/null || true)"
+
+  if ! is_user_wallpaper "$current"; then
+    repair "invalid or fallback path"
+  else
+    resolved="$(readlink -f "$current_link" 2>/dev/null || true)"
+    if [[ "$resolved" != "$current" ]]; then
+      repair "stale current symlink"
+    fi
+  fi
+
+  sleep 5
+done

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Control fino del brillo interno del HP ZBook Studio x360 G5.
+# Uso: brightness-fine up|down|coarse-up|coarse-down|get
+set -euo pipefail
+
+DEVICE="${BRIGHTNESS_DEVICE:-intel_backlight}"
+STEP="${BRIGHTNESS_STEP:-2%}"
+
+case "${1:-}" in
+  up)       exec brightnessctl -d "$DEVICE" set "+$STEP" ;;
+  down)     exec brightnessctl -d "$DEVICE" set "$STEP-" ;;
+  coarse-up)   exec brightnessctl -d "$DEVICE" set +10% ;;
+  coarse-down) exec brightnessctl -d "$DEVICE" set 10%- ;;
+  get)      brightnessctl -d "$DEVICE" info ;;
+  *)        printf 'Uso: %s up|down|coarse-up|coarse-down|get\n' "$0" >&2; exit 2 ;;
+esac
